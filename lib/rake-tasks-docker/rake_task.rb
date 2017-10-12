@@ -13,7 +13,10 @@ namespace :docker do
   task :up, :services do |task, args|
     services = RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
     Timeout::timeout(ENV['RAKE_DOCKER_TIMEOUT'] || 0) do
-      services.up
+      unless services.up
+        STDERR.puts 'The project failed to start'
+        exit(1)
+      end
 
       loop do
         services.refresh
