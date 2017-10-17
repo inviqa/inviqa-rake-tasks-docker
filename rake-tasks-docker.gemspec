@@ -7,8 +7,8 @@ require 'rake-tasks-docker/version'
 Gem::Specification.new do |spec|
   spec.name          = "rake-tasks-docker"
   spec.version       = RakeTasksDocker::VERSION
-  spec.authors       = ["Andy Thompson"]
-  spec.email         = ["athompson@inviqa.com"]
+  spec.authors       = ["Andy Thompson", "Kieren Evans"]
+  spec.email         = ["athompson@inviqa.com", "kevans+rake-tasks-docker@inviqa.com"]
 
   spec.summary       = %q{Docker tasks for Rake}
   spec.description   = %q{Docker tasks for Rake}

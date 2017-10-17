@@ -4,14 +4,18 @@ require 'timeout'
 require_relative 'services'
 
 namespace :docker do
+  def services_from_args(args)
+    RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
+  end
+
   task :status, :services do |task, args|
-    services = RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
+    services = services_from_args(args)
     puts services.status
     exit(1) if services.status != 'started'
   end
 
   task :up, :services do |task, args|
-    services = RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
+    services = services_from_args(args)
     pid = nil
 
     begin
@@ -40,5 +44,47 @@ namespace :docker do
     ensure
       Process.kill('TERM', pid) unless pid.nil?
     end
+  end
+
+  task :build, :services do |task, args|
+    services_from_args(args).build
+  end
+
+  task :setup, :services do |task, args|
+    # docker-compose.override.yml
+    # docker.env
+    Rake::Task['docker:build'].invoke
+  end
+
+  task :start, :services do |task, args|
+    services_from_args(args).up
+  end
+
+  task :stop, :services do |task, args|
+    services_from_args(args).stop
+  end
+
+  task :restart, :services do |task, args|
+    Rake::Task['docker:stop'].invoke
+    Rake::Task['docker:start'].invoke
+  end
+
+  task :destroy, :services do |task, args|
+    Rake::Task['docker:stop'].invoke
+    services_from_args(args).down
+  end
+
+  task :reset, :services do |task, args|
+    Rake::Task['docker:destroy'].invoke
+    Rake::Task['docker:build'].invoke
+    Rake::Task['docker:start'].invoke
+  end
+
+  task :ip, :services do |task, args|
+    puts services_from_args(args).ip
+  end
+
+  task :command, :services, :user, :cmd do |task, args|
+    services_from_args(args).exec(args[:user], args[:cmd])
   end
 end

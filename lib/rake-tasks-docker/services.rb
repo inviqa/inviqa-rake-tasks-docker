@@ -46,12 +46,35 @@ module RakeTasksDocker
       status_from_states(states)
     end
 
+    def ip
+      refresh unless @inspections
+      Hash[@services.zip(@inspections.map { |inspection| inspection[:NetworkSettings][:Networks][:IPAddress] })]
+    end
+
     def up
       Process.spawn 'docker-compose', 'up', '-d', *@services
     end
 
     def logs
       Process.spawn 'docker-compose', 'logs', '-f', *@services
+    end
+
+    def stop
+      system 'docker-compose', 'stop', '-v', *@services
+    end
+
+    def down
+      system 'docker-compose', 'down', '--volumes', *@services
+    end
+
+    def build
+      system 'eval', '$(echo $(printf "%s " $(cat docker.env))) docker-compose build --pull -v', *@services
+    end
+
+    def exec(user, command)
+      @services.each do |service|
+        system 'docker-compose', 'exec', '--user', user, service, command
+      end
     end
   end
 end
