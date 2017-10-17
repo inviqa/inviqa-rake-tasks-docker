@@ -53,7 +53,7 @@ namespace :docker do
   task :setup, :services do |task, args|
     # docker-compose.override.yml
     # docker.env
-    Rake::Task['docker:build'].invoke
+    Rake::Task['docker:build'].invoke(*args)
   end
 
   task :start, :services do |task, args|
@@ -65,19 +65,19 @@ namespace :docker do
   end
 
   task :restart, :services do |task, args|
-    Rake::Task['docker:stop'].invoke
-    Rake::Task['docker:start'].invoke
+    Rake::Task['docker:stop'].invoke(*args)
+    Rake::Task['docker:start'].invoke(*args)
   end
 
   task :destroy, :services do |task, args|
-    Rake::Task['docker:stop'].invoke
+    Rake::Task['docker:stop'].invoke(*args)
     services_from_args(args).down
   end
 
   task :reset, :services do |task, args|
-    Rake::Task['docker:destroy'].invoke
-    Rake::Task['docker:build'].invoke
-    Rake::Task['docker:start'].invoke
+    Rake::Task['docker:destroy'].invoke(*args)
+    Rake::Task['docker:build'].invoke(*args)
+    Rake::Task['docker:start'].invoke(*args)
   end
 
   task :ip, :services do |task, args|
