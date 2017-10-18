@@ -72,7 +72,7 @@ module RakeTasksDocker
       File.readlines('docker.env').each do |line|
         key_value = line.match(/^([^=]+)=(.*)$/)
         env[key_value[1]] = key_value[2]
-      end
+      end if File.exist? 'docker.env'
       system(env, 'docker-compose', 'build', '--pull', *@services)
     end
 
