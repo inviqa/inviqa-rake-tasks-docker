@@ -68,7 +68,12 @@ module RakeTasksDocker
     end
 
     def build
-      system 'eval', '$(echo $(printf "%s " $(cat docker.env))) docker-compose build --pull -v', *@services
+      env = {}
+      File.readlines('docker.env').each do |line|
+        key_value = line.match(/^([^=]+)=(.*)$/)
+        env[key_value[1]] = key_value[2]
+      end
+      system(env, 'docker-compose', 'build', '--pull', *@services)
     end
 
     def exec(user, command)

@@ -47,7 +47,8 @@ namespace :docker do
   end
 
   task :build, :services do |task, args|
-    services_from_args(args).build
+    services = services_from_args(args)
+    services.build
   end
 
   task :setup, :services do |task, args|
