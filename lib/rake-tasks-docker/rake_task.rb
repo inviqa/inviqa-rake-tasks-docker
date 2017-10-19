@@ -16,6 +16,7 @@ namespace :docker do
   end
 
   task :up, :services do |task, args|
+    puts '==> Starting project:'
     services = services_from_args(args)
     pid = nil
 
@@ -48,44 +49,63 @@ namespace :docker do
   end
 
   task :build, :services do |task, args|
+    puts '==> Building docker images:'
     services = services_from_args(args)
     services.build
+    puts "==> Docker images built\n"
+  end
+
+  file 'docker-compose.override.yml' => ['docker-compose.override.yml.dist'] do
+    puts '==> Creating docker-compose.override.yml if it doesn\'t exist:'
+    asker = HighLine.new
+    if !File.exist?('docker-compose.override.yml') || asker.agree('Dist file has changed, okay to overwrite docker-compose.override.yml? (y/n): ')
+      cp('docker-compose.override.yml.dist', 'docker-compose.override.yml')
+      puts "==> docker-compose.override.yml created\n"
+    else
+      puts "==> docker-compose.override.yml skipped\n"
+    end
+  end
+
+  file 'docker.env' => ['docker.env.dist'] do
+    puts '==> Creating docker.env if it doesn\'t exist:'
+    env = {}
+
+    %w(docker.env docker.env.dist).each do |file|
+      File.readlines(file).each do |line|
+        key_value = line.match(/^([^=]+)=(.*)$/)
+        key = key_value[1]
+        next if env[key]
+        env[key] = key_value[2]
+      end if File.exist?(file)
+    end
+
+    asker = HighLine.new
+    env.select {|key, value| value.empty? }.each do |key, value|
+      env[key] = asker.ask "#{key}: "
+    end
+    File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n"))
+
+    puts "==> docker.env created\n"
   end
 
   task :copy_dist do |task, args|
-    if File.exist?('docker-compose.override.yml.dist') && !File.exist?('docker-compose.override.yml')
-      FileUtils.copy('docker-compose.override.yml.dist', 'docker-compose.override.yml')
-    end
-    if File.exist?('docker.env.dist') && !File.exist?('docker.env')
-      FileUtils.copy('docker.env.dist', 'docker.env')
-    end
-  end
-
-  task :write_env do |task, args|
-    asker = HighLine.new
-    env = {}
-    File.readlines('docker.env').each do |line|
-      key_value = line.match(/^([^=]+)=(.*)$/)
-      key = key_value[1]
-      value = key_value[2]
-      value = asker.ask "#{key}: " if value.empty?
-      env[key] = value
-    end
-    File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n"))
+    Rake::Task['docker-compose.override.yml'].invoke(*args)
+    Rake::Task['docker.env'].invoke(*args)
   end
 
   task :setup, :services do |task, args|
     Rake::Task['docker:copy_dist'].invoke(*args)
-    Rake::Task['docker:write_env'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
   end
 
   task :start, :services do |task, args|
-    services_from_args(args).up
+    Rake::Task['docker:up'].invoke(*args)
   end
 
   task :stop, :services do |task, args|
+    puts '==> Stopping project:'
     services_from_args(args).stop
+    puts "==> Project stopped\n"
   end
 
   task :restart, :services do |task, args|
@@ -95,7 +115,9 @@ namespace :docker do
 
   task :destroy, :services do |task, args|
     Rake::Task['docker:stop'].invoke(*args)
+    puts '==> Removing containers and volumes for project:'
     services_from_args(args).down
+    puts "==> Project containers and volumes removed\n"
   end
 
   task :reset, :services do |task, args|

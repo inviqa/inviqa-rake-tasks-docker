@@ -60,7 +60,7 @@ module RakeTasksDocker
     end
 
     def stop
-      system 'docker-compose', 'stop', '-v', *@services
+      system 'docker-compose', 'stop', *@services
     end
 
     def down
