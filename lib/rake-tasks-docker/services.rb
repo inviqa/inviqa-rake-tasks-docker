@@ -17,27 +17,26 @@ module RakeTasksDocker
     def states
       states = {}
       @inspections.each do |inspection|
-        if inspection['State']
-          state = inspection['State']
-          if state['Running'] && state['Health']
-            states[inspection['Name']] = "#{state['Status']} (#{state['Health']['Status']})"
-          elsif state['ExitCode'] > 0
-            states[inspection['Name']] = "#{state['Status']} (non-zero exit code)"
-          else
-            states[inspection['Name']] = state['Status']
-          end
-        end
+        next unless inspection['State']
+        state = inspection['State']
+        states[inspection['Name']] = if state['Running'] && state['Health']
+                                       "#{state['Status']} (#{state['Health']['Status']})"
+                                     elsif state['ExitCode'] > 0
+                                       "#{state['Status']} (non-zero exit code)"
+                                     else
+                                       state['Status']
+                                     end
       end
       states
     end
 
     def status_from_states(states)
       if states.empty? || !(states.values & ['exited (non-zero exit code)', 'running (unhealthy)', 'restarting', 'dead']).empty?
-        return 'failed'
+        'failed'
       elsif !(states.values & ['created', 'running (starting)']).empty?
-        return 'starting'
+        'starting'
       else
-        return 'started'
+        'started'
       end
     end
 
@@ -69,10 +68,12 @@ module RakeTasksDocker
 
     def build
       env = {}
-      File.readlines('docker.env').each do |line|
-        key_value = line.match(/^([^=]+)=(.*)$/)
-        env[key_value[1]] = key_value[2]
-      end if File.exist? 'docker.env'
+      if File.exist? 'docker.env'
+        File.readlines('docker.env').each do |line|
+          key_value = line.match(/^([^=]+)=(.*)$/)
+          env[key_value[1]] = key_value[2]
+        end
+      end
       system(env, 'docker-compose', 'build', '--pull', *@services)
     end
 

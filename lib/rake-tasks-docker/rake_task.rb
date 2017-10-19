@@ -9,13 +9,13 @@ namespace :docker do
     RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
   end
 
-  task :status, :services do |task, args|
+  task :status, :services do |_task, args|
     services = services_from_args(args)
     puts services.status
     exit(1) if services.status != 'started'
   end
 
-  task :up, :services do |task, args|
+  task :up, :services do |_task, args|
     puts '==> Starting project:'
     services = services_from_args(args)
     pid = nil
@@ -48,7 +48,7 @@ namespace :docker do
     end
   end
 
-  task :build, :services do |task, args|
+  task :build, :services do |_task, args|
     puts '==> Building docker images:'
     services = services_from_args(args)
     services.build
@@ -70,17 +70,18 @@ namespace :docker do
     puts '==> Creating docker.env if it doesn\'t exist:'
     env = {}
 
-    %w(docker.env docker.env.dist).each do |file|
+    %w[docker.env docker.env.dist].each do |file|
+      next unless File.exist?(file)
       File.readlines(file).each do |line|
         key_value = line.match(/^([^=]+)=(.*)$/)
         key = key_value[1]
         next if env[key]
         env[key] = key_value[2]
-      end if File.exist?(file)
+      end
     end
 
     asker = HighLine.new
-    env.select {|key, value| value.empty? }.each do |key, value|
+    env.select { |_key, value| value.empty? }.each do |key, _value|
       env[key] = asker.ask "#{key}: "
     end
     File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n"))
@@ -88,49 +89,49 @@ namespace :docker do
     puts "==> docker.env created\n"
   end
 
-  task :copy_dist do |task, args|
+  task :copy_dist do |_task, args|
     Rake::Task['docker-compose.override.yml'].invoke(*args)
     Rake::Task['docker.env'].invoke(*args)
   end
 
-  task :setup, :services do |task, args|
+  task :setup, :services do |_task, args|
     Rake::Task['docker:copy_dist'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
   end
 
-  task :start, :services do |task, args|
+  task :start, :services do |_task, args|
     Rake::Task['docker:up'].invoke(*args)
   end
 
-  task :stop, :services do |task, args|
+  task :stop, :services do |_task, args|
     puts '==> Stopping project:'
     services_from_args(args).stop
     puts "==> Project stopped\n"
   end
 
-  task :restart, :services do |task, args|
+  task :restart, :services do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :destroy, :services do |task, args|
+  task :destroy, :services do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     puts '==> Removing containers and volumes for project:'
     services_from_args(args).down
     puts "==> Project containers and volumes removed\n"
   end
 
-  task :reset, :services do |task, args|
+  task :reset, :services do |_task, args|
     Rake::Task['docker:destroy'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :ip, :services do |task, args|
+  task :ip, :services do |_task, args|
     puts services_from_args(args).ip
   end
 
-  task :command, :services, :user, :cmd do |task, args|
+  task :command, :services, :user, :cmd do |_task, args|
     services_from_args(args).exec(args[:user], args[:cmd])
   end
 end
