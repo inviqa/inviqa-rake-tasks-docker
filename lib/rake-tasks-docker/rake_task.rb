@@ -52,7 +52,7 @@ namespace :docker do
     puts '==> Building docker images:'
     services = services_from_args(args)
     services.build
-    puts "==> Docker images built\n"
+    puts "==> Docker images built\n\n"
   end
 
   file 'docker-compose.override.yml' => ['docker-compose.override.yml.dist'] do
@@ -60,9 +60,9 @@ namespace :docker do
     asker = HighLine.new
     if !File.exist?('docker-compose.override.yml') || asker.agree('Dist file has changed, okay to overwrite docker-compose.override.yml? (y/n): ')
       cp('docker-compose.override.yml.dist', 'docker-compose.override.yml')
-      puts "==> docker-compose.override.yml created\n"
+      puts "==> docker-compose.override.yml created\n\n"
     else
-      puts "==> docker-compose.override.yml skipped\n"
+      puts "==> docker-compose.override.yml skipped\n\n"
     end
   end
 
@@ -84,9 +84,9 @@ namespace :docker do
     env.select { |_key, value| value.empty? }.each do |key, _value|
       env[key] = asker.ask "#{key}: "
     end
-    File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n"))
+    File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n\n"))
 
-    puts "==> docker.env created\n"
+    puts "==> docker.env created\n\n"
   end
 
   task :copy_dist do |_task, args|
@@ -106,7 +106,7 @@ namespace :docker do
   task :stop, :services do |_task, args|
     puts '==> Stopping project:'
     services_from_args(args).stop
-    puts "==> Project stopped\n"
+    puts "==> Project stopped\n\n"
   end
 
   task :restart, :services do |_task, args|
@@ -118,7 +118,7 @@ namespace :docker do
     Rake::Task['docker:stop'].invoke(*args)
     puts '==> Removing containers and volumes for project:'
     services_from_args(args).down
-    puts "==> Project containers and volumes removed\n"
+    puts "==> Project containers and volumes removed\n\n"
   end
 
   task :reset, :services do |_task, args|
