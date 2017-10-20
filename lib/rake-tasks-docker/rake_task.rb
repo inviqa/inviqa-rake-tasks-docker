@@ -5,17 +5,28 @@ require 'highline'
 require_relative 'services'
 
 namespace :docker do
-  def services_from_args(args)
-    RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
+  def docker_compose_files
+    docker_compose_files = %w[docker-compose.yml docker-compose.override.yml]
+    docker_compose_files << "docker-compose-dev-#{RUBY_PLATFORM.sub('darwin', 'macos').match(/(macos|linux)/)[1]}.yml"
+    docker_compose_files.select { |file| File.exist? file }
   end
 
-  task :status, :services do |_task, args|
+  def services_from_args(args, build_env = {})
+    RakeTasksDocker::Services.new(
+      args[:services] ? args[:services].split(' ') : [],
+      args[:docker_compose_options] ? args[:docker_compose_options].split(' ') : [],
+      { 'COMPOSE_FILE' => docker_compose_files.join(':') },
+      build_env
+    )
+  end
+
+  task :status, :docker_compose_options, :services do |_task, args|
     services = services_from_args(args)
     puts services.status
     exit(1) if services.status != 'started'
   end
 
-  task :up, :services do |_task, args|
+  task :up, :docker_compose_options, :services do |_task, args|
     puts '==> Starting project:'
     services = services_from_args(args)
     pid = nil
@@ -48,9 +59,16 @@ namespace :docker do
     end
   end
 
-  task :build, :services do |_task, args|
+  task :build, :docker_compose_options, :services do |_task, args|
     puts '==> Building docker images:'
-    services = services_from_args(args)
+    build_env = {}
+    if File.exist? 'docker.env'
+      File.readlines('docker.env').each do |line|
+        key_value = line.match(/^([^=]+)=(.*)$/)
+        build_env[key_value[1]] = key_value[2]
+      end
+    end
+    services = services_from_args(args, build_env)
     services.build
     puts "==> Docker images built\n\n"
   end
@@ -94,44 +112,44 @@ namespace :docker do
     Rake::Task['docker.env'].invoke(*args)
   end
 
-  task :setup, :services do |_task, args|
+  task :setup, :docker_compose_options, :services do |_task, args|
     Rake::Task['docker:copy_dist'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
   end
 
-  task :start, :services do |_task, args|
+  task :start, :docker_compose_options, :services do |_task, args|
     Rake::Task['docker:up'].invoke(*args)
   end
 
-  task :stop, :services do |_task, args|
+  task :stop, :docker_compose_options, :services do |_task, args|
     puts '==> Stopping project:'
     services_from_args(args).stop
     puts "==> Project stopped\n\n"
   end
 
-  task :restart, :services do |_task, args|
+  task :restart, :docker_compose_options, :services do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :destroy, :services do |_task, args|
+  task :destroy, :docker_compose_options, :services do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     puts '==> Removing containers and volumes for project:'
     services_from_args(args).down
     puts "==> Project containers and volumes removed\n\n"
   end
 
-  task :reset, :services do |_task, args|
+  task :reset, :docker_compose_options, :services do |_task, args|
     Rake::Task['docker:destroy'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :ip, :services do |_task, args|
+  task :ip, :docker_compose_options, :services do |_task, args|
     puts services_from_args(args).ip
   end
 
-  task :command, :services, :user, :cmd do |_task, args|
+  task :command, :docker_compose_options, :services, :user, :cmd do |_task, args|
     services_from_args(args).exec(args[:user], args[:cmd])
   end
 end
