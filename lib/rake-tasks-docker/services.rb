@@ -47,7 +47,11 @@ module RakeTasksDocker
     end
 
     def up
-      system 'docker-compose', 'up', '-d', *@services
+      Process.spawn 'docker-compose', 'up', '-d', *@services
+    end
+
+    def logs
+      Process.spawn 'docker-compose', 'logs', '-f', *@services
     end
   end
 end

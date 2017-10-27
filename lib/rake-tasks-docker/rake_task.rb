@@ -12,24 +12,33 @@ namespace :docker do
 
   task :up, :services do |task, args|
     services = RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
-    Timeout::timeout(ENV['RAKE_DOCKER_TIMEOUT'] || 0) do
-      unless services.up
-        STDERR.puts 'The project failed to start'
-        exit(1)
-      end
+    pid = nil
 
-      loop do
-        services.refresh
-        case services.status
-        when 'failed'
+    begin
+      Timeout::timeout(ENV['RAKE_DOCKER_TIMEOUT'].to_i || 0) do
+        Process.wait(services.up)
+        if $?.exitstatus > 0
           STDERR.puts 'The project failed to start'
           exit(1)
-        when 'started'
-          STDERR.puts 'The project completed startup'
-          exit(0)
         end
-        sleep 1
+
+        pid = services.logs
+
+        loop do
+          services.refresh
+          case services.status
+          when 'failed'
+            STDERR.puts 'The project failed to start'
+            exit(1)
+          when 'started'
+            STDERR.puts 'The project completed startup'
+            exit(0)
+          end
+          sleep 1
+        end
       end
+    ensure
+      Process.kill('TERM', pid) unless pid.nil?
     end
   end
 end
