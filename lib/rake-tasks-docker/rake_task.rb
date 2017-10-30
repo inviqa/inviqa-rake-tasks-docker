@@ -20,6 +20,12 @@ namespace :docker do
     )
   end
 
+  def run_process(&process)
+    Timeout::timeout(ENV['RAKE_DOCKER_TIMEOUT'].to_i || 0) do
+      yield
+    end
+  end
+
   task :status, :docker_compose_options, :services do |_task, args|
     services = services_from_args(args)
     puts services.status
@@ -32,23 +38,22 @@ namespace :docker do
     pid = nil
 
     begin
-      Timeout::timeout(ENV['RAKE_DOCKER_TIMEOUT'].to_i || 0) do
+      run_process do
         Process.wait(services.up)
         if $?.exitstatus > 0
-          STDERR.puts 'The project failed to start'
+          STDERR.puts "==> The project failed to start\n\n"
           exit(1)
         end
 
         pid = services.logs
-
         loop do
           services.refresh
           case services.status
           when 'failed'
-            STDERR.puts 'The project failed to start'
+            STDERR.puts "\n\n==> The project failed to start\n\n"
             exit(1)
           when 'started'
-            STDERR.puts 'The project completed startup'
+            STDERR.puts "\n\n==> The project completed startup\n\n"
             exit(0)
           end
           sleep 1
@@ -69,7 +74,13 @@ namespace :docker do
       end
     end
     services = services_from_args(args, build_env)
-    services.build
+    run_process do
+      Process.wait(services.build)
+      if $?.exitstatus > 0
+        STDERR.puts "==> The project failed to build\n\n"
+        exit(1)
+      end
+    end
     puts "==> Docker images built\n\n"
   end
 
@@ -123,7 +134,13 @@ namespace :docker do
 
   task :stop, :docker_compose_options, :services do |_task, args|
     puts '==> Stopping project:'
-    services_from_args(args).stop
+    run_process do
+      Process.wait(services_from_args(args).stop)
+      if $?.exitstatus > 0
+        STDERR.puts "==> The project failed to stop\n\n"
+        exit(1)
+      end
+    end
     puts "==> Project stopped\n\n"
   end
 
@@ -135,7 +152,13 @@ namespace :docker do
   task :destroy, :docker_compose_options, :services do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     puts '==> Removing containers and volumes for project:'
-    services_from_args(args).down
+    run_process do
+      Process.wait(services_from_args(args).down)
+      if $?.exitstatus > 0
+        STDERR.puts "==> The project failed to be destroyed\n\n"
+        exit(1)
+      end
+    end
     puts "==> Project containers and volumes removed\n\n"
   end
 

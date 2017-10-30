@@ -76,7 +76,7 @@ module RakeTasksDocker
 
     def exec(user, command)
       @services.each do |service|
-        Process.spawn @docker_compose_env, 'docker-compose', *@docker_compose_options, 'exec', '--user', user, service, command
+        system @docker_compose_env, 'docker-compose', *@docker_compose_options, 'exec', '--user', user, service, command
       end
     end
   end
