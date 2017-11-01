@@ -50,7 +50,7 @@ module RakeTasksDocker
 
     def ip
       refresh unless @inspections
-      Hash[@services.zip(@inspections.map { |inspection| inspection[:NetworkSettings][:Networks][:IPAddress] })]
+      Hash[@services.zip(@inspections.map { |inspection| inspection['NetworkSettings']['Networks'].flatten()[1]['IPAddress'] })]
     end
 
     def up
