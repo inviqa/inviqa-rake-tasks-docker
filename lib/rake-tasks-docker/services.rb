@@ -2,15 +2,14 @@ require 'json'
 
 module RakeTasksDocker
   class Services
-    def initialize(services = [], docker_compose_options = [], docker_compose_env = {}, docker_compose_build_env = {})
+    def initialize(services = [], docker_compose_env = {}, docker_compose_build_env = {})
       @services = services
-      @docker_compose_options = docker_compose_options
       @docker_compose_env = docker_compose_env || {}
       @docker_compose_build_env = docker_compose_build_env || {}
     end
 
     def refresh
-      containers = `docker-compose #{@docker_compose_options.join(' ')} ps -q #{@services.join(' ')}`.split("\n")
+      containers = `docker-compose ps -q #{@services.join(' ')}`.split("\n")
       @inspections = []
       containers.each do |container_ref|
         @inspections << JSON.parse(`docker inspect #{container_ref}`).first
@@ -54,29 +53,29 @@ module RakeTasksDocker
     end
 
     def up
-      Process.spawn @docker_compose_env, 'docker-compose', *@docker_compose_options, 'up', '-d', *@services
+      Process.spawn @docker_compose_env, 'docker-compose', 'up', '-d', *@services
     end
 
     def logs
-      Process.spawn @docker_compose_env, 'docker-compose', *@docker_compose_options, 'logs', '-f', *@services
+      Process.spawn @docker_compose_env, 'docker-compose', 'logs', '-f', *@services
     end
 
     def stop
-      Process.spawn @docker_compose_env, 'docker-compose', *@docker_compose_options, 'stop', *@services
+      Process.spawn @docker_compose_env, 'docker-compose', 'stop', *@services
     end
 
     def down
-      Process.spawn @docker_compose_env, 'docker-compose', *@docker_compose_options, 'down', '--volumes', *@services
+      Process.spawn @docker_compose_env, 'docker-compose', 'down', '--volumes', *@services
     end
 
     def build
       env = @docker_compose_env.merge(@docker_compose_build_env)
-      Process.spawn(env, 'docker-compose', *@docker_compose_options, 'build', '--pull', *@services)
+      Process.spawn(env, 'docker-compose', 'build', '--pull', *@services)
     end
 
     def exec(user, command)
       @services.each do |service|
-        system @docker_compose_env, 'docker-compose', *@docker_compose_options, 'exec', '--user', user, service, command
+        system @docker_compose_env, 'docker-compose', 'exec', '--user', user, service, command
       end
     end
   end
