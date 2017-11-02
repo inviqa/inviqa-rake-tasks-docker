@@ -168,10 +168,26 @@ namespace :docker do
   end
 
   task :ip, :services do |_task, args|
-    STDOUT.puts services_from_args(args).ip
+    if args[:services] =~ / /
+      STDOUT.puts services_from_args(args).ip.to_json
+    else
+      STDOUT.puts services_from_args(args).ip[args[:services]]
+    end
   end
 
   task :command, :services, :user, :cmd do |_task, args|
     services_from_args(args).exec(args[:user], args[:cmd])
+  end
+
+  task :hostsfile, :services, :hostname do |_task, args|
+    STDOUT.puts '==> Adding hostname to hosts'
+    ip = services_from_args(args).ip[args[:services]]
+    hosts_entry = "#{ip} #{args[:hostname]}"
+    system "echo '#{hosts_entry}' >> /etc/hosts"
+    if $?.exitstatus > 0
+      STDERR.puts "==> Failed to add hostname to hosts\n\n"
+      exit(1)
+    end
+    STDOUT.puts '==> Added hostname to hosts'
   end
 end
