@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rake-tasks-docker (1.0.0)
+    rake-tasks-docker (0.2.0)
       highline (~> 1.7.8)
       rake (>= 10.0, <= 13)
       slop (~> 4.6.0)

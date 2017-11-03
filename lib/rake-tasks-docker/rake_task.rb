@@ -6,9 +6,11 @@ require 'highline'
 require_relative 'services'
 
 namespace :docker do
-  def parse_options
-    args = ARGV
-    args = ARGV[2..-1] if ARGV.length > 2
+  def parse_options(args = [])
+    if args.empty?
+      args = ARGV
+      args = ARGV[2..-1] if ARGV.length > 2
+    end
     Slop.parse args do |options|
       options.array '-s', '--services', 'The docker services to interact with, separated by comma', default: []
       yield options if block_given?
@@ -21,16 +23,16 @@ namespace :docker do
     end
   end
 
-  def parse_command
-    parse_options do |options|
+  def parse_command(args = [])
+    parse_options(args) do |options|
       services_option_required(options)
       options.string '-u', '--user', 'The user to log in to docker containers with. Defaults to root', default: 'root'
       options.string '-c', '--command', 'The command to run', required: true
     end
   end
 
-  def parse_hostname
-    parse_options do |options|
+  def parse_hostname(args = [])
+    parse_options(args) do |options|
       services_option_required(options)
       options.string '-h', '--hostname', 'The hostname to set up', required: true
     end
@@ -212,7 +214,7 @@ namespace :docker do
   end
 
   task :command do
-    command_args = parse_command
+    command_args = parse_command(args)
     services_from_args(command_args).exec(command_args[:user], command_args[:command])
   end
 
