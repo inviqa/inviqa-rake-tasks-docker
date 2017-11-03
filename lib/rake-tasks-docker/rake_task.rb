@@ -219,8 +219,13 @@ namespace :docker do
       STDERR.puts "==> Please specify only one service for docker:hostsfile\n\n"
       exit(1)
     end
+    service = services.first
     STDOUT.puts '==> Adding hostname to hosts'
-    ip = services_from_args(options).ip[services]
+    ip = services_from_args(options).ip[service]
+    unless ip
+      STDERR.puts "==> Failed to find the IP address of the #{service} container\n\n"
+      exit(1)
+    end
     hosts_entry = "#{ip} #{hostname}"
     system "echo '#{hosts_entry}' >> /etc/hosts"
     if $?.exitstatus > 0
