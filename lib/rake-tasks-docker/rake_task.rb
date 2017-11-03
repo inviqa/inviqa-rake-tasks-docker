@@ -7,7 +7,9 @@ require_relative 'services'
 
 namespace :docker do
   def parse_options
-    Slop.parse ARGV[2..-1] do |options|
+    args = ARGV
+    args = ARGV[2..-1] if ARGV.length > 2
+    Slop.parse args do |options|
       options.array '-s', '--services', 'The docker services to interact with, separated by comma', default: []
       yield options if block_given?
     end
@@ -54,13 +56,13 @@ namespace :docker do
     end
   end
 
-  task :status do |_task, args|
+  task :status do
     services = services_from_args(parse_options)
     STDOUT.puts services.status
     exit(1) if services.status != 'started'
   end
 
-  task :up do |_task, args|
+  task :up do
     STDOUT.puts '==> Starting project:'
     services = services_from_args(parse_options)
     pid = nil
@@ -92,7 +94,7 @@ namespace :docker do
     end
   end
 
-  task :build do |_task, args|
+  task :build do
     STDOUT.puts '==> Building docker images:'
     build_env = {}
     if File.exist? 'docker.env'
@@ -160,7 +162,7 @@ namespace :docker do
     Rake::Task['docker:up'].invoke(*args)
   end
 
-  task :stop do |_task, args|
+  task :stop do
     STDOUT.puts '==> Stopping project:'
     run_process do
       Process.wait(services_from_args(parse_options).stop)
@@ -196,26 +198,29 @@ namespace :docker do
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :ip do |_task, args|
+  task :ip do
     options = parse_options
     services = options[:services]
     if services.size > 1
       STDOUT.puts services_from_args(options).ip.to_json
+    elsif services.size == 1
+      STDOUT.puts services_from_args(options).ip[services.first]
     else
-      STDOUT.puts services_from_args(options).ip[services[0]]
+      STDERR.puts "==> Please provide a service to look up the IP for\n\n"
+      exit(1)
     end
   end
 
-  task :command do |_task, args|
+  task :command do
     command_args = parse_command
     services_from_args(command_args).exec(command_args[:user], command_args[:command])
   end
 
-  task :hostsfile do |_task, args|
+  task :hostsfile do
     options = parse_hostname
     services = options[:services]
     hostname = options[:hostname]
-    if services.length > 1
+    if services.length != 1
       STDERR.puts "==> Please specify only one service for docker:hostsfile\n\n"
       exit(1)
     end
