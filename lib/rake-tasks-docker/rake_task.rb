@@ -7,22 +7,30 @@ require_relative 'services'
 
 namespace :docker do
   def parse_options
-    Slop.parse ARGV[2..-1] do |o|
-      o.array '-s', '--services', 'The docker services to interact with, separated by comma', default: []
-      yield o if block_given?
+    Slop.parse ARGV[2..-1] do |options|
+      options.array '-s', '--services', 'The docker services to interact with, separated by comma', default: []
+      yield options if block_given?
+    end
+  end
+
+  def services_option_required(options)
+    options.options.select { |option| option.flags.include?('-s') }.each do |option|
+      option.config[:required] = true
     end
   end
 
   def parse_command
-    parse_options do |o|
-      o.string '-u', '--user', 'The user to log in to docker containers with. Defaults to root', default: 'root'
-      o.string '-c', '--command', 'The command to run', required: true
+    parse_options do |options|
+      services_option_required(options)
+      options.string '-u', '--user', 'The user to log in to docker containers with. Defaults to root', default: 'root'
+      options.string '-c', '--command', 'The command to run', required: true
     end
   end
 
   def parse_hostname
-    parse_options do |o|
-      o.string '-h', '--hostname', 'The hostname to set up', required: true
+    parse_options do |options|
+      services_option_required(options)
+      options.string '-h', '--hostname', 'The hostname to set up', required: true
     end
   end
 
@@ -207,6 +215,10 @@ namespace :docker do
     options = parse_hostname
     services = options[:services]
     hostname = options[:hostname]
+    if services.length > 1
+      STDERR.puts "==> Please specify only one service for docker:hostsfile\n\n"
+      exit(1)
+    end
     STDOUT.puts '==> Adding hostname to hosts'
     ip = services_from_args(options).ip[services]
     hosts_entry = "#{ip} #{hostname}"
