@@ -19,7 +19,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'highline', '~> 1.7.8'
-  spec.add_dependency 'rake', '>= 10.0', '<= 12'
+  spec.add_dependency 'rake', '>= 10.0', '<= 13'
+  spec.add_dependency 'slop', '~> 4.6.0'
 
   spec.add_development_dependency 'rspec', '~> 3.6'
   spec.add_development_dependency 'rubocop', '~> 0.51.0'

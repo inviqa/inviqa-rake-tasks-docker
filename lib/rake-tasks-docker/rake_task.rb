@@ -1,10 +1,31 @@
 
+require 'slop'
 require 'timeout'
 require 'highline'
 
 require_relative 'services'
 
 namespace :docker do
+  def parse_options
+    Slop.parse ARGV[2..-1] do |o|
+      o.array '-s', '--services', 'The docker services to interact with, separated by comma', default: []
+      yield o if block_given?
+    end
+  end
+
+  def parse_command
+    parse_options do |o|
+      o.string '-u', '--user', 'The user to log in to docker containers with. Defaults to root', default: 'root'
+      o.string '-c', '--command', 'The command to run', required: true
+    end
+  end
+
+  def parse_hostname
+    parse_options do |o|
+      o.string '-h', '--hostname', 'The hostname to set up', required: true
+    end
+  end
+
   def docker_compose_files
     docker_compose_files = %w[docker-compose.yml docker-compose.override.yml]
     docker_compose_files << "docker-compose-dev-#{RUBY_PLATFORM.sub('darwin', 'macos').match(/(macos|linux)/)[1]}.yml"
@@ -13,27 +34,27 @@ namespace :docker do
 
   def services_from_args(args, build_env = {})
     RakeTasksDocker::Services.new(
-      args[:services] ? args[:services].split(' ') : [],
+      args[:services],
       { 'COMPOSE_FILE' => docker_compose_files.join(':') },
       build_env
     )
   end
 
-  def run_process(&process)
-    Timeout::timeout(ENV['RAKE_DOCKER_TIMEOUT'].to_i || 0) do
+  def run_process
+    Timeout.timeout(ENV['RAKE_DOCKER_TIMEOUT'].to_i || 0) do
       yield
     end
   end
 
-  task :status, :services do |_task, args|
-    services = services_from_args(args)
+  task :status do |_task, args|
+    services = services_from_args(parse_options)
     STDOUT.puts services.status
     exit(1) if services.status != 'started'
   end
 
-  task :up, :services do |_task, args|
+  task :up do |_task, args|
     STDOUT.puts '==> Starting project:'
-    services = services_from_args(args)
+    services = services_from_args(parse_options)
     pid = nil
 
     begin
@@ -63,7 +84,7 @@ namespace :docker do
     end
   end
 
-  task :build, :services do |_task, args|
+  task :build do |_task, args|
     STDOUT.puts '==> Building docker images:'
     build_env = {}
     if File.exist? 'docker.env'
@@ -72,7 +93,7 @@ namespace :docker do
         build_env[key_value[1]] = key_value[2]
       end
     end
-    services = services_from_args(args, build_env)
+    services = services_from_args(parse_options, build_env)
     run_process do
       Process.wait(services.build)
       if $?.exitstatus > 0
@@ -122,19 +143,19 @@ namespace :docker do
     Rake::Task['docker.env'].invoke(*args)
   end
 
-  task :setup, :services do |_task, args|
+  task :setup do |_task, args|
     Rake::Task['docker:copy_dist'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
   end
 
-  task :start, :services do |_task, args|
+  task :start do |_task, args|
     Rake::Task['docker:up'].invoke(*args)
   end
 
-  task :stop, :services do |_task, args|
+  task :stop do |_task, args|
     STDOUT.puts '==> Stopping project:'
     run_process do
-      Process.wait(services_from_args(args).stop)
+      Process.wait(services_from_args(parse_options).stop)
       if $?.exitstatus > 0
         STDERR.puts "==> The project failed to stop\n\n"
         exit(1)
@@ -143,16 +164,16 @@ namespace :docker do
     STDOUT.puts "==> Project stopped\n\n"
   end
 
-  task :restart, :services do |_task, args|
+  task :restart do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :destroy, :services do |_task, args|
+  task :destroy do |_task, args|
     Rake::Task['docker:stop'].invoke(*args)
     STDOUT.puts '==> Removing containers and volumes for project:'
     run_process do
-      Process.wait(services_from_args(args).down)
+      Process.wait(services_from_args(parse_options).down)
       if $?.exitstatus > 0
         STDERR.puts "==> The project failed to be destroyed\n\n"
         exit(1)
@@ -161,28 +182,34 @@ namespace :docker do
     STDOUT.puts "==> Project containers and volumes removed\n\n"
   end
 
-  task :reset, :services do |_task, args|
+  task :reset do |_task, args|
     Rake::Task['docker:destroy'].invoke(*args)
     Rake::Task['docker:build'].invoke(*args)
     Rake::Task['docker:start'].invoke(*args)
   end
 
-  task :ip, :services do |_task, args|
-    if args[:services] =~ / /
-      STDOUT.puts services_from_args(args).ip.to_json
+  task :ip do |_task, args|
+    options = parse_options
+    services = options[:services]
+    if services.size > 1
+      STDOUT.puts services_from_args(options).ip.to_json
     else
-      STDOUT.puts services_from_args(args).ip[args[:services]]
+      STDOUT.puts services_from_args(options).ip[services[0]]
     end
   end
 
-  task :command, :services, :user, :cmd do |_task, args|
-    services_from_args(args).exec(args[:user], args[:cmd])
+  task :command do |_task, args|
+    command_args = parse_command
+    services_from_args(command_args).exec(command_args[:user], command_args[:command])
   end
 
-  task :hostsfile, :services, :hostname do |_task, args|
+  task :hostsfile do |_task, args|
+    options = parse_hostname
+    services = options[:services]
+    hostname = options[:hostname]
     STDOUT.puts '==> Adding hostname to hosts'
-    ip = services_from_args(args).ip[args[:services]]
-    hosts_entry = "#{ip} #{args[:hostname]}"
+    ip = services_from_args(options).ip[services]
+    hosts_entry = "#{ip} #{hostname}"
     system "echo '#{hosts_entry}' >> /etc/hosts"
     if $?.exitstatus > 0
       STDERR.puts "==> Failed to add hostname to hosts\n\n"
