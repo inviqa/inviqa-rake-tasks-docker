@@ -1,4 +1,5 @@
 require 'json'
+require 'shellwords'
 
 module RakeTasksDocker
   class Services
@@ -75,7 +76,8 @@ module RakeTasksDocker
 
     def exec(user, command)
       @services.each do |service|
-        system @docker_compose_env, 'docker-compose', 'exec', '--user', user, service, command
+        docker_compose_command = "docker-compose exec --user='#{Shellwords.escape(user)}' #{Shellwords.escape(service)} #{command}"
+        system @docker_compose_env, 'bash', '-c', docker_compose_command
       end
     end
   end
