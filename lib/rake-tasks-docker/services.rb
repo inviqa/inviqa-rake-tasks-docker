@@ -80,5 +80,23 @@ module RakeTasksDocker
         system @docker_compose_env, 'bash', '-c', docker_compose_command
       end
     end
+
+    def download(source, destination)
+      refresh unless @inspections
+      @inspections.each do |inspection|
+        service_source = inspection['Id'] + ':' + source
+        docker_command = "docker cp #{Shellwords.escape(service_source)} #{Shellwords.escape(destination)}"
+        Process.spawn(@docker_compose_env, docker_command)
+      end
+    end
+
+    def upload(source, destination)
+      refresh unless @inspections
+      @inspections.each do |inspection|
+        service_destination = inspection['Id'] + ':' + destination
+        docker_command = "docker cp #{Shellwords.escape(source)} #{Shellwords.escape(service_destination)}"
+        Process.spawn(@docker_compose_env, docker_command)
+      end
+    end
   end
 end
