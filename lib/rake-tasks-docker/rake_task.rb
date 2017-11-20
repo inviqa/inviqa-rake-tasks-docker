@@ -6,11 +6,14 @@ require 'highline'
 require_relative 'services'
 
 namespace :docker do
+  def parse_argv
+    args = ARGV
+    args = ARGV[2..-1] if ARGV.length > 2
+    args
+  end
+
   def parse_options(args = [])
-    if args.empty?
-      args = ARGV
-      args = ARGV[2..-1] if ARGV.length > 2
-    end
+    args = parse_argv if args.empty?
     Slop.parse args do |options|
       options.array '-s', '--services', 'The docker services to interact with, separated by comma', default: []
       yield options if block_given?
@@ -23,9 +26,16 @@ namespace :docker do
     end
   end
 
-  def parse_command(args = [])
+  def services_option_default(options, default_container)
+    options.options.select { |option| option.flags.include?('-s') }.each do |option|
+      option.config[:default] = [default_container]
+    end
+  end
+
+  def parse_command(args = [], default_container = '')
     parse_options(args) do |options|
-      services_option_required(options)
+      services_option_required(options) unless default_container
+      services_option_default(options, default_container) if default_container
       options.string '-u', '--user', 'The user to log in to docker containers with. Defaults to root', default: 'root'
       options.string '-c', '--command', 'The command to run', required: true
     end
@@ -214,7 +224,14 @@ namespace :docker do
   end
 
   task :command do
-    command_args = parse_command(args)
+    command_args = parse_command
+    services_from_args(command_args).exec(command_args[:user], command_args[:command])
+  end
+
+  task :bash do
+    args = parse_argv
+    args << "--command=bash"
+    command_args = parse_command(args, 'web')
     services_from_args(command_args).exec(command_args[:user], command_args[:command])
   end
 
