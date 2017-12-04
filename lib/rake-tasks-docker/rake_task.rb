@@ -155,7 +155,7 @@ namespace :docker do
     env.select { |_key, value| value.empty? }.each_key do |key|
       env[key] = asker.ask "#{key}: "
     end
-    File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n\n"))
+    File.write('docker.env', env.map { |key, value| "#{key}=#{value}" }.join("\n"))
 
     STDOUT.puts "==> docker.env created\n\n"
   end
