@@ -50,7 +50,17 @@ module RakeTasksDocker
 
     def ip
       refresh unless @inspections
-      Hash[@services.zip(@inspections.map { |inspection| inspection['NetworkSettings']['Networks'].flatten()[1]['IPAddress'] })]
+      Hash[
+        @services.zip(
+          @inspections.map do |inspection|
+            if RUBY_PLATFORM =~ /darwin/
+              '127.0.0.1'
+            else
+              inspection['NetworkSettings']['Networks'].flatten()[1]['IPAddress']
+            end
+          end
+        )
+      ]
     end
 
     def up
