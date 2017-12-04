@@ -112,6 +112,7 @@ namespace :docker do
     if File.exist? 'docker.env'
       File.readlines('docker.env').each do |line|
         key_value = line.match(/^([^=]+)=(.*)$/)
+        next unless key_value
         build_env[key_value[1]] = key_value[2]
       end
     end
@@ -145,6 +146,7 @@ namespace :docker do
       next unless File.exist?(file)
       File.readlines(file).each do |line|
         key_value = line.match(/^([^=]+)=(.*)$/)
+        next unless key_value
         key = key_value[1]
         next if env[key]
         env[key] = key_value[2]
