@@ -225,6 +225,11 @@ namespace :docker do
     end
   end
 
+  task :logs do
+    options = parse_options
+    services_from_args(options).logs(false)
+  end
+
   task :command do
     command_args = parse_command
     services_from_args(command_args).exec(command_args[:user], command_args[:command])

@@ -67,8 +67,12 @@ module RakeTasksDocker
       Process.spawn @docker_compose_env, 'docker-compose', 'up', '-d', *@services
     end
 
-    def logs
-      Process.spawn @docker_compose_env, 'docker-compose', 'logs', '-f', *@services
+    def logs(background = true)
+      if background
+        Process.spawn @docker_compose_env, 'docker-compose', 'logs', '-f', *@services
+      else
+        system @docker_compose_env, 'docker-compose', 'logs', '-f', *@services
+      end
     end
 
     def stop
