@@ -258,7 +258,13 @@ namespace :docker do
       exit(1)
     end
     hosts_entry = "#{ip} #{hostname}"
-    system "echo '#{hosts_entry}' >> /etc/hosts"
+    current_hosts = File.read('/etc/hosts')
+    if current_hosts =~ /^#{Regexp.escape(hosts_entry)}$/
+      STDOUT.puts "==> Hosts file entry already present\n\n"
+      exit(0)
+    end
+
+    system "echo '#{hosts_entry}' | sudo tee -a /etc/hosts"
     if $?.exitstatus > 0
       STDERR.puts "==> Failed to add hostname to hosts\n\n"
       exit(1)
