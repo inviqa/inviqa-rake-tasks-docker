@@ -51,6 +51,10 @@ namespace :docker do
   def docker_compose_files
     docker_compose_files = %w[docker-compose.yml docker-compose.override.yml]
     docker_compose_files << "docker-compose-dev-#{RUBY_PLATFORM.sub('darwin', 'macos').match(/(macos|linux)/)[1]}.yml"
+    if RUBY_PLATFORM =~ /darwin/
+      docker_compose_files << 'docker-compose-dev-macos-delegated.yml' if ENV['RAKE_USE_DELEGATED']
+      docker_compose_files << 'docker-compose-dev-macos-sync.yml' unless ENV['RAKE_USE_DELEGATED']
+    end
     docker_compose_files.select { |file| File.exist? file }
   end
 
