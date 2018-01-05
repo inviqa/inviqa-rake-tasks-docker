@@ -107,13 +107,14 @@ module RakeTasksDocker
 
     def upload(source, destination)
       refresh unless @inspections
+      container_destination = "/tmp/#{File.basename(destination)}"
       @inspections.each do |inspection|
-        container_destination = "/tmp/#{File.basename(destination)}"
         service_destination = inspection['Id'] + ':' + container_destination
         docker_command = "docker cp #{Shellwords.escape(source)} #{Shellwords.escape(service_destination)}"
         Process.spawn(@docker_compose_env, docker_command)
         return container_destination
       end
+      return container_destination
     end
   end
 end
