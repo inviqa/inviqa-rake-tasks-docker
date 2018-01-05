@@ -112,6 +112,7 @@ module RakeTasksDocker
         service_destination = inspection['Id'] + ':' + container_destination
         docker_command = "docker cp #{Shellwords.escape(source)} #{Shellwords.escape(service_destination)}"
         Process.spawn(@docker_compose_env, docker_command)
+        return container_destination
       end
     end
   end
