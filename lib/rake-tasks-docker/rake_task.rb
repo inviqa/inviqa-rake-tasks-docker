@@ -39,4 +39,12 @@ namespace :docker do
       Process.kill('TERM', pid) unless pid.nil?
     end
   end
+
+  RakeTasksDocker::Services.task :stop, :services do |task, services|
+    Process.wait(services.stop)
+  end
+
+  RakeTasksDocker::Services.task :down do |task, services|
+    Process.wait(services.down)
+  end
 end
