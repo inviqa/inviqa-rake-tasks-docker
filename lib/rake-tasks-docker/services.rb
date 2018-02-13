@@ -41,7 +41,9 @@ module RakeTasksDocker
     end
 
     def status_from_states(states)
-      if states.empty? || !(states.values & ['exited (non-zero exit code)', 'running (unhealthy)', 'restarting', 'dead']).empty?
+      if states.empty?
+        return 'not started'
+      elsif !(states.values & ['exited (non-zero exit code)', 'running (unhealthy)', 'restarting', 'dead']).empty?
         return 'failed'
       elsif !(states.values & ['created', 'running (starting)']).empty?
         return 'starting'
