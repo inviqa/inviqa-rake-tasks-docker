@@ -2,8 +2,18 @@ require 'json'
 
 module RakeTasksDocker
   class Services
+    def self.from_args(args)
+      self.new(args[:services] ? args[:services].split(' ') : [])
+    end
+
     def initialize(services = [])
       @services = services
+    end
+
+    def self.task(*task_args, &block)
+      Rake::Task.define_task *task_args do |task, args|
+        block.call task, self.from_args(args)
+      end
     end
 
     def refresh
