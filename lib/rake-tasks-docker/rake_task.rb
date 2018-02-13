@@ -4,14 +4,12 @@ require 'timeout'
 require_relative 'services'
 
 namespace :docker do
-  task :status, :services do |task, args|
-    services = RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
+  RakeTasksDocker::Services.task :status, :services do |task, services|
     puts services.status
     exit(1) if services.status != 'started'
   end
 
-  task :up, :services do |task, args|
-    services = RakeTasksDocker::Services.new(args[:services] ? args[:services].split(' ') : [])
+  RakeTasksDocker::Services.task :up, :services do |task, services|
     pid = nil
 
     begin
@@ -40,5 +38,13 @@ namespace :docker do
     ensure
       Process.kill('TERM', pid) unless pid.nil?
     end
+  end
+
+  RakeTasksDocker::Services.task :stop, :services do |task, services|
+    Process.wait(services.stop)
+  end
+
+  RakeTasksDocker::Services.task :down do |task, services|
+    Process.wait(services.down)
   end
 end

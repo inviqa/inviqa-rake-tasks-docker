@@ -2,12 +2,21 @@ require 'json'
 
 module RakeTasksDocker
   class Services
+    def self.from_args(args)
+      self.new(args[:services] ? args[:services].split(' ') : [])
+    end
+
     def initialize(services = [])
       @services = services
     end
 
+    def self.task(*task_args, &block)
+      Rake::Task.define_task *task_args do |task, args|
+        block.call task, self.from_args(args)
+      end
+    end
+
     def refresh
-      containers = `docker-compose ps -q #{@services.join(' ')}`.split("\n")
       @inspections = []
       containers.each do |container_ref|
         @inspections << JSON.parse(`docker inspect #{container_ref}`).first
@@ -32,7 +41,9 @@ module RakeTasksDocker
     end
 
     def status_from_states(states)
-      if states.empty? || !(states.values & ['exited (non-zero exit code)', 'running (unhealthy)', 'restarting', 'dead']).empty?
+      if states.empty?
+        return 'not started'
+      elsif !(states.values & ['exited (non-zero exit code)', 'running (unhealthy)', 'restarting', 'dead']).empty?
         return 'failed'
       elsif !(states.values & ['created', 'running (starting)']).empty?
         return 'starting'
@@ -52,6 +63,20 @@ module RakeTasksDocker
 
     def logs
       Process.spawn 'docker-compose', 'logs', '-f', *@services
+    end
+
+    def stop
+      Process.spawn 'docker-compose', 'stop', *@services
+    end
+
+    def down
+      Process.spawn 'docker-compose', 'down', '--volumes', '--rmi', 'local'
+    end
+
+    protected
+
+    def containers
+      `docker-compose ps -q #{@services.join(' ')}`.split("\n")
     end
   end
 end
