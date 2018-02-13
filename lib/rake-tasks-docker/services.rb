@@ -17,7 +17,6 @@ module RakeTasksDocker
     end
 
     def refresh
-      containers = `docker-compose ps -q #{@services.join(' ')}`.split("\n")
       @inspections = []
       containers.each do |container_ref|
         @inspections << JSON.parse(`docker inspect #{container_ref}`).first
@@ -70,6 +69,12 @@ module RakeTasksDocker
 
     def down
       Process.spawn 'docker-compose', 'down', '--volumes', '--rmi', 'local'
+    end
+
+    protected
+
+    def containers
+      `docker-compose ps -q #{@services.join(' ')}`.split("\n")
     end
   end
 end
