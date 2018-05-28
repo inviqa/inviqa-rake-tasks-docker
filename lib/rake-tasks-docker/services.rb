@@ -67,11 +67,11 @@ module RakeTasksDocker
       Process.spawn @docker_compose_env, 'docker-compose', 'up', '-d', *@services
     end
 
-    def logs(background = true)
+    def logs(background = true, tail_amount = 50)
       if background
-        Process.spawn @docker_compose_env, 'docker-compose', 'logs', '-f', *@services
+        Process.spawn @docker_compose_env, 'docker-compose', 'logs', '-f', '--tail=' + tail_amount.to_s, *@services
       else
-        system @docker_compose_env, 'docker-compose', 'logs', '-f', *@services
+        system @docker_compose_env, 'docker-compose', 'logs', '-f', '--tail=' + tail_amount.to_s, *@services
       end
     end
 
