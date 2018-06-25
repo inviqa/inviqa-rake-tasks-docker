@@ -80,7 +80,7 @@ module RakeTasksDocker
     end
 
     def down
-      Process.spawn @docker_compose_env, 'docker-compose', 'down', '--volumes', *@services
+      Process.spawn @docker_compose_env, 'docker-compose', 'down', '--volumes', '--rmi', 'local', *@services
     end
 
     def build
