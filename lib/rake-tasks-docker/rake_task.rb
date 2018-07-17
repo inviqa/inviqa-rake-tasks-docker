@@ -263,7 +263,13 @@ namespace :docker do
     end
     hosts_entry = "#{ip} #{hostname}"
     current_hosts = File.read('/etc/hosts')
-    if current_hosts =~ /^#{Regexp.escape(hosts_entry)}$/
+    has_hosts_entry = current_hosts =~ /^#{Regexp.escape(hosts_entry)}$/
+    has_other_hosts_entry = current_hosts =~ /^(?!#{Regexp.escape(ip)})[0-9.]+\s+#{Regexp.escape(hostname)}$/
+    if has_other_hosts_entry
+      STDOUT.puts "==> Hosts file entry for a different IP present, removing\n"
+      system "sudo perl -ni -e 'print unless /^(?!#{Regexp.escape(ip)})[0-9.]+\s+#{Regexp.escape(hostname)}$/' /etc/hosts"
+    end
+    if has_hosts_entry
       STDOUT.puts "==> Hosts file entry already present\n\n"
       exit(0)
     end
