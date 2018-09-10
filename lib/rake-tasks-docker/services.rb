@@ -90,7 +90,7 @@ module RakeTasksDocker
 
     def exec(user, command)
       @services.each do |service|
-        docker_compose_command = "docker-compose exec --user='#{Shellwords.escape(user)}' #{Shellwords.escape(service)} #{command}"
+        docker_compose_command = "docker-compose exec --env COLUMNS=`tput cols` --env LINES=`tput lines` --user='#{Shellwords.escape(user)}' #{Shellwords.escape(service)} #{command}"
         system @docker_compose_env, 'bash', '-c', docker_compose_command
       end
     end
